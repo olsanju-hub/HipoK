@@ -9,11 +9,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>K+ Urgencias | Hipopotasemia</title>
 
-  <!-- Favicon (evita que el navegador pida /favicon.ico y dé 404) -->
-  <link rel="icon" href="assets/images/ui/favicon.webp" type="image/webp" />
-  <link rel="apple-touch-icon" href="assets/images/ui/favicon.webp" />
-
-  <!-- RUTA correcta según tu árbol -->
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 
@@ -58,7 +53,6 @@
           <button data-screen="ecg"><span class="ico">📈</span> ECG</button>
           <button data-screen="session"><span class="ico">🖼️</span> Sesión</button>
           <button data-screen="cases"><span class="ico">🧪</span> Casos</button>
-          <!-- bibliografía/estudio/tips NO van aquí -->
         </div>
       </div>
     </div>
@@ -145,7 +139,7 @@
     <section class="screen" id="screen-algo" data-key="algo">
       <div class="stack">
         <div class="card grow">
-          <div class="card-title">🧭 Algoritmo (imagen)</div>
+          <div class="card-title">🧭 Algoritmo</div>
 
           <div class="viewer" id="algoViewer" aria-label="Visor de algoritmo">
             <div class="viewer-top">
@@ -160,10 +154,6 @@
             </div>
           </div>
 
-          <div class="hr"></div>
-          <p class="hint">
-            Ruta esperada (PNG): <strong>assets/images/algo/algoritmo.png</strong>
-          </p>
         </div>
       </div>
     </section>
@@ -192,11 +182,6 @@
             </div>
           </div>
 
-          <div class="hr"></div>
-          <p class="hint">
-            Pon tus ECG aquí: <strong>assets/images/ecg/</strong> en <strong>PNG</strong>.
-            Nombres sugeridos: <strong>hk_001.png … hk_010.png</strong>.
-          </p>
         </div>
       </div>
     </section>
@@ -204,7 +189,7 @@
     <section class="screen" id="screen-session" data-key="session">
       <div class="stack">
         <div class="card grow">
-          <div class="card-title">🖼️ Sesión (imágenes)</div>
+          <div class="card-title">🖼️ Sesión</div>
 
           <div class="slides">
             <div class="viewer" id="sessViewer">
@@ -223,7 +208,7 @@
             </div>
 
             <div class="box sess-foot">
-              <div class="sess-path"><strong id="sessPathHint">/sesion/001.png … 021.png</strong></div>
+              <div class="sess-path"><strong>Diapositivas</strong></div>
               <button class="mini" id="sessJump" type="button">Ir a…</button>
             </div>
           </div>
@@ -324,7 +309,6 @@
 
   </main>
 
-  <!-- JS (rutas correctas según tu árbol) -->
   <script src="js/data.ecg.js"></script>
   <script src="js/data.study.js"></script>
   <script src="js/data.cases.js"></script>
