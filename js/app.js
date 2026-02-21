@@ -186,61 +186,24 @@
     renderECGThumbs();
   }
 
-  // ========= SESIÓN: autodetección de base (sesion/ vs assets/sesion/) =========
-  let SESSION_BASE = null;
-
   function sessDir(){
     const d = (window.HK_SESSION_DIR || "sesion").replace(/^\/+|\/+$/g,'');
     return d.length ? d : "sesion";
   }
 
-  function sessPathWithBase(base, n){
+  function sessPath(n){
     const ext = (window.HK_SESSION_EXT || "png");
-    const cleanBase = String(base || "").replace(/^\/+|\/+$/g,'');
-    return `${cleanBase}/${pad3(n)}.${ext}`;
+    return `${sessDir()}/${pad3(n)}.${ext}`;
   }
 
-  async function probeUrl(url){
-    try{
-      const r = await fetch(url, { method: "HEAD", cache: "no-store" });
-      if(r && r.ok) return true;
-    }catch(_e){}
-    try{
-      const r2 = await fetch(url, { method: "GET", cache: "no-store" });
-      return !!(r2 && r2.ok);
-    }catch(_e2){}
-    return false;
-  }
-
-  async function resolveSessionBase(){
-    if(SESSION_BASE) return SESSION_BASE;
-
-    const dir = sessDir();
-    const ext = (window.HK_SESSION_EXT || "png");
-
-    const base1 = dir;                 // tu árbol preferido: /sesion/001.png
-    const base2 = `assets/${dir}`;     // fallback típico: /assets/sesion/001.png
-
-    const test1 = `${base1}/${pad3(1)}.${ext}`;
-    if(await probeUrl(test1)){ SESSION_BASE = base1; return SESSION_BASE; }
-
-    const test2 = `${base2}/${pad3(1)}.${ext}`;
-    if(await probeUrl(test2)){ SESSION_BASE = base2; return SESSION_BASE; }
-
-    SESSION_BASE = base1; // por defecto, aunque falle, para que el usuario vea la ruta “esperada”
-    return SESSION_BASE;
-  }
-
-  async function setSession(n){
+  function setSession(n){
     const total = Number(window.HK_SESSION_TOTAL || 21);
     const clamped = Math.max(1, Math.min(total, n));
     sessIndex = clamped;
 
-    const base = await resolveSessionBase();
-    $("sessImage").src = sessPathWithBase(base, sessIndex);
+    $("sessImage").src = sessPath(sessIndex);
     $("sessCaption").textContent = `Diapositiva ${pad3(sessIndex)} / ${pad3(total)}`;
   }
-  // ============================================================================
 
   function setAlgoImage(){
     const src = (window.HK_ALGO_SRC || "assets/images/algo/algoritmo.png");
@@ -579,7 +542,7 @@
     enableNavigation();
   }
 
-  async function init(){
+  function init(){
     ensureAccCSS();
     bind();
 
@@ -594,13 +557,7 @@
     renderECGThumbs();
     if((window.HK_ECG_IMAGES||[]).length) setECG(0);
 
-    // Resolver base real de sesión y pintar hint correcto
-    const base = await resolveSessionBase();
-    const total = Number(window.HK_SESSION_TOTAL || 21);
-    const ext = (window.HK_SESSION_EXT || "png");
-    $("sessPathHint").textContent = `/${base}/001.${ext} … ${pad3(total)}.${ext}`;
-    await setSession(1);
-
+    setSession(1);
     setAlgoImage();
 
     calculate();
