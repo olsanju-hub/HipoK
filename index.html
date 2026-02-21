@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b2a55" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>K+ Urgencias | Hipopotasemia</title>
+
+  <!-- Favicon (evita que el navegador pida /favicon.ico y dé 404) -->
+  <link rel="icon" href="assets/images/ui/favicon.webp" type="image/webp" />
+  <link rel="apple-touch-icon" href="assets/images/ui/favicon.webp" />
+
+  <!-- RUTA correcta según tu árbol -->
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-row">
+      <button class="menu-btn" id="openMenu" aria-label="Abrir menú">☰</button>
+
+      <div class="brand" aria-label="Marca">
+        <div class="logo" aria-label="Logo">
+          <img src="assets/images/ui/logo.webp" alt="" />
+        </div>
+        <div class="txt">
+          <div class="title">K+ Urgencias</div>
+          <div class="subtitle">Hipopotasemia</div>
+          <div class="sign">Kelly Esther Escorcia Reyes · R3 MFyC</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="app" id="appRoot">
+
+    <!-- Side tabs (SOLO aquí: no en el menú) -->
+    <div class="side-tabs" aria-label="Accesos">
+      <button class="tab" aria-label="Bibliografía" id="openBib"><span class="tico">Bibliografía</span></button>
+      <button class="tab" aria-label="Estudio" id="openStudy"><span class="tico">Estudio</span></button>
+      <button class="tab" aria-label="Tips" id="openTips"><span class="tico">Tips</span></button>
+    </div>
+
+    <!-- Drawer -->
+    <div class="drawer-overlay" id="drawerOverlay" aria-hidden="true">
+      <div class="drawer" role="dialog" aria-modal="true" aria-label="Menú">
+        <div class="drawer-head">
+          <div class="t">Menú</div>
+          <button class="drawer-close" id="closeMenu" aria-label="Cerrar">✕</button>
+        </div>
+
+        <div class="menu" id="menuList">
+          <button data-screen="calc" class="active"><span class="ico">📊</span> Calculadora</button>
+          <button data-screen="algo"><span class="ico">🧭</span> Algoritmo</button>
+          <button data-screen="ecg"><span class="ico">📈</span> ECG</button>
+          <button data-screen="session"><span class="ico">🖼️</span> Sesión</button>
+          <button data-screen="cases"><span class="ico">🧪</span> Casos</button>
+          <!-- bibliografía/estudio/tips NO van aquí -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Screens -->
+    <section class="screen active" id="screen-calc" data-key="calc">
+      <div class="stack">
+        <div class="card">
+          <div class="card-title">⚙️ Datos rápidos</div>
+
+          <div class="sev" id="sevButtons" aria-label="Gravedad" style="margin-bottom:10px">
+            <button data-sev="leve" class="active">
+              <div class="name">Leve</div>
+              <div class="range">3.0–3.5</div>
+            </button>
+            <button data-sev="moderada">
+              <div class="name">Moderada</div>
+              <div class="range">2.5–3.0</div>
+            </button>
+            <button data-sev="grave">
+              <div class="name">Grave</div>
+              <div class="range">&lt;2.5</div>
+            </button>
+          </div>
+
+          <div class="row" style="margin-bottom:10px">
+            <div class="input">
+              <label for="kCurrent">K+ sérico (mEq/L)</label>
+              <input type="number" id="kCurrent" step="0.1" inputmode="decimal" placeholder="Ej: 2.8" />
+            </div>
+
+            <div class="input">
+              <label for="weight">Peso (kg)</label>
+              <input type="number" id="weight" inputmode="numeric" placeholder="Ej: 70" />
+            </div>
+          </div>
+
+          <div class="risk" style="margin-bottom:10px">
+            <div class="toggle" id="riskToggle" aria-label="Riesgo arrítmico alto"></div>
+            <div class="txt">Riesgo arrítmico alto</div>
+            <button class="iconbtn sm" id="openRiskInfo" aria-label="Ver criterios de riesgo">i</button>
+            <span class="pill" id="riskPill">ALTO RIESGO</span>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="k">Déficit (estimación)</div>
+              <div class="v" id="deficitResult">--</div>
+              <div class="u">mEq</div>
+            </div>
+            <div class="stat">
+              <div class="k">K objetivo</div>
+              <div class="v" id="targetResult">--</div>
+              <div class="u">mEq/L</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="recommend">
+          <div class="box ok" id="recBox">
+            <h4 id="recTitle">Introduce K+ para recomendaciones</h4>
+            <p id="recBody">La recomendación se ajusta automáticamente con K+, gravedad y riesgo.</p>
+          </div>
+
+          <div class="box" id="ivBox">
+            <h4>💉 IV (si aplica): claro y cerrado</h4>
+            <p id="ivLines">
+              Velocidad sugerida: --<br />
+              Concentración sugerida: --<br />
+              Disolvente: SSF 0.9%<br />
+              Monitorización ECG: --<br />
+              Control de K+: --
+            </p>
+          </div>
+
+          <div class="box warning">
+            <h4>⚠️ Seguridad</h4>
+            <p><strong>Nunca en bolo IV.</strong> Administrar en perfusión, idealmente con bomba.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-algo" data-key="algo">
+      <div class="stack">
+        <div class="card grow">
+          <div class="card-title">🧭 Algoritmo (imagen)</div>
+
+          <div class="viewer" id="algoViewer" aria-label="Visor de algoritmo">
+            <div class="viewer-top">
+              <div class="cap" id="algoCaption">Algoritmo</div>
+              <div class="viewer-actions">
+                <button class="iconbtn" id="algoFS" aria-label="Pantalla completa">⛶</button>
+              </div>
+            </div>
+            <div class="viewer-main">
+              <button class="fs-exit" id="algoExit" type="button" aria-label="Salir de pantalla completa">✕</button>
+              <img id="algoImage" alt="Algoritmo" />
+            </div>
+          </div>
+
+          <div class="hr"></div>
+          <p class="hint">
+            Ruta esperada (PNG): <strong>assets/images/algo/algoritmo.png</strong>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-ecg" data-key="ecg">
+      <div class="stack">
+        <div class="card grow">
+          <div class="card-title">📈 ECG · Hipopotasemia</div>
+
+          <div class="gallery">
+            <div class="thumbs" id="ecgThumbs" aria-label="Miniaturas ECG"></div>
+
+            <div class="viewer" id="ecgViewer" aria-label="Visor ECG">
+              <div class="viewer-top">
+                <div class="cap" id="ecgCaption">—</div>
+                <div class="viewer-actions">
+                  <button class="iconbtn" id="ecgPrev" aria-label="Anterior">‹</button>
+                  <button class="iconbtn" id="ecgNext" aria-label="Siguiente">›</button>
+                  <button class="iconbtn" id="ecgFS" aria-label="Pantalla completa">⛶</button>
+                </div>
+              </div>
+              <div class="viewer-main">
+                <button class="fs-exit" id="ecgExit" type="button" aria-label="Salir de pantalla completa">✕</button>
+                <img id="ecgImage" alt="ECG" />
+              </div>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+          <p class="hint">
+            Pon tus ECG aquí: <strong>assets/images/ecg/</strong> en <strong>PNG</strong>.
+            Nombres sugeridos: <strong>hk_001.png … hk_010.png</strong>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-session" data-key="session">
+      <div class="stack">
+        <div class="card grow">
+          <div class="card-title">🖼️ Sesión (imágenes)</div>
+
+          <div class="slides">
+            <div class="viewer" id="sessViewer">
+              <div class="viewer-top">
+                <div class="cap" id="sessCaption">Diapositiva —</div>
+                <div class="viewer-actions">
+                  <button class="iconbtn" id="sessPrev" aria-label="Anterior">‹</button>
+                  <button class="iconbtn" id="sessNext" aria-label="Siguiente">›</button>
+                  <button class="iconbtn" id="sessFS" aria-label="Pantalla completa">⛶</button>
+                </div>
+              </div>
+              <div class="viewer-main">
+                <button class="fs-exit" id="sessExit" type="button" aria-label="Salir de pantalla completa">✕</button>
+                <img id="sessImage" alt="Sesión" />
+              </div>
+            </div>
+
+            <div class="box sess-foot">
+              <div class="sess-path"><strong id="sessPathHint">/sesion/001.png … 021.png</strong></div>
+              <button class="mini" id="sessJump" type="button">Ir a…</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-cases" data-key="cases">
+      <div class="stack">
+        <div class="card grow cases-card">
+          <div class="card-title">🧪 Casos (práctica)</div>
+
+          <div class="case" id="caseBox">
+            <div class="h">
+              <div id="caseTitle">Listo</div>
+              <div class="meta" id="caseMeta">—</div>
+            </div>
+
+            <div class="ctx" id="caseBody">Pulsa “Nuevo caso”. Responde y te explico el porqué.</div>
+
+            <div class="opts" id="caseOptions"></div>
+
+            <div class="fb" id="caseFeedback"></div>
+
+            <div class="bar">
+              <button class="mini" id="newCase" type="button">Nuevo caso</button>
+              <button class="mini" id="resetCase" type="button" style="display:none">Repetir</button>
+            </div>
+          </div>
+
+          <div class="box" style="margin-top:auto">
+            <h4>Presentaciones habituales (tu hospital)</h4>
+            <p class="small" id="presentationsText"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="modalBib">
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Bibliografía">
+        <div class="modal-head">
+          <div class="mt">Bibliografía</div>
+          <button class="modal-close" data-close="modalBib">Cerrar</button>
+        </div>
+        <ol id="bibList" class="ol"></ol>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="modalStudy">
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Estudio">
+        <div class="modal-head">
+          <div class="mt">Estudio</div>
+          <button class="modal-close" data-close="modalStudy">Cerrar</button>
+        </div>
+        <div id="studyRoot"></div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="modalTips">
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Tips">
+        <div class="modal-head">
+          <div class="mt">Tips</div>
+          <button class="modal-close" data-close="modalTips">Cerrar</button>
+        </div>
+        <ul id="tipsList" class="ul"></ul>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="modalRiskInfo">
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Criterios de riesgo arrítmico">
+        <div class="modal-head">
+          <div class="mt">Riesgo arrítmico: criterios prácticos</div>
+          <button class="modal-close" data-close="modalRiskInfo">Cerrar</button>
+        </div>
+
+        <p class="para">Marca lo que aplique. Si hay uno o más, es razonable tratar como “alto riesgo”.</p>
+
+        <div class="checklist" id="riskChecklist">
+          <label class="chk"><input type="checkbox" value="ecg"> Cambios ECG por hipopotasemia (U prominente, depresión ST, etc.)</label>
+          <label class="chk"><input type="checkbox" value="symp"> Síntomas relevantes (debilidad marcada, palpitaciones, síncope, etc.)</label>
+          <label class="chk"><input type="checkbox" value="cardio"> Cardiopatía estructural o antecedentes de arritmia</label>
+          <label class="chk"><input type="checkbox" value="dig"> Tratamiento con digoxina</label>
+          <label class="chk"><input type="checkbox" value="qt"> QT largo / fármacos que prolongan QT</label>
+          <label class="chk"><input type="checkbox" value="severe"> K+ muy bajo (&lt;2,5)</label>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="risk-actions">
+          <button class="mini" id="applyRiskFromChecklist" type="button">Marcar “Riesgo alto”</button>
+          <button class="mini ghost" id="clearRiskChecklist" type="button">Limpiar</button>
+        </div>
+
+        <p class="para subtle">Nota: recordatorio operativo (no sustituye juicio clínico ni protocolo local).</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- JS (rutas correctas según tu árbol) -->
+  <script src="js/data.ecg.js"></script>
+  <script src="js/data.study.js"></script>
+  <script src="js/data.cases.js"></script>
+  <script src="js/data.bib.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
