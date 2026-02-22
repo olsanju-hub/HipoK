@@ -1,3 +1,4 @@
+// js/app.js (reemplaza el tuyo por este)
 /* global HK_ECG_IMAGES, HK_STUDY, HK_PRESENTATIONS_TEXT, HK_BIB, HK_TIPS, HK_SESSION_TOTAL, HK_SESSION_EXT, HK_SESSION_DIR, HK_ALGO_SRC */
 (function(){
   'use strict';
@@ -13,8 +14,10 @@
   let ecgIndex = 0;
   let sessIndex = 1;
 
-  // null | 'ecg' | 'session' | 'algo'
-  let fsMode = null;
+  // 'native' fullscreen detected by document.fullscreenElement
+  // 'pseudo' fullscreen controlled by CSS class
+  let fsMode = null;      // null | 'ecg' | 'session' | 'algo'
+  let pseudoMode = null;  // null | 'ecg' | 'session' | 'algo'
 
   const CASE_STATE = { current:null, answered:false };
 
@@ -39,12 +42,92 @@
     ["modalBib","modalStudy","modalTips","modalRiskInfo"].forEach(id=>$(id).classList.remove("open"));
   }
 
-  async function requestFullscreen(el){
+  function isAnyModalOpen(){
+    return ["modalBib","modalStudy","modalTips","modalRiskInfo"].some(id=>$(id).classList.contains("open"));
+  }
+
+  function showExitButtons(on){
+    ["ecgExit","sessExit","algoExit"].forEach(id=>{
+      const el = $(id);
+      if(!el) return;
+      el.classList.toggle("show", !!on);
+    });
+  }
+
+  function enterPseudoFullscreen(el, mode){
+    pseudoMode = mode;
+    fsMode = mode;
+    el.classList.add("pseudo-fs");
+    document.body.classList.add("pseudo-fs-on");
+    showExitButtons(true);
+  }
+  function exitPseudoFullscreen(){
+    pseudoMode = null;
+    fsMode = null;
+    document.querySelectorAll(".viewer.pseudo-fs").forEach(v=>v.classList.remove("pseudo-fs"));
+    document.body.classList.remove("pseudo-fs-on");
+    showExitButtons(false);
+  }
+
+  async function requestFullscreen(el, mode){
     if(!el) return;
-    try{
-      if(document.fullscreenElement) await document.exitFullscreen();
-      else if(el.requestFullscreen) await el.requestFullscreen();
-    }catch(_e){}
+
+    // Si ya estás en pseudo, salir
+    if(pseudoMode){
+      exitPseudoFullscreen();
+      return;
+    }
+
+    // Intento nativo
+    const canNative = !!(el.requestFullscreen && document.fullscreenEnabled);
+    if(canNative){
+      try{
+        if(document.fullscreenElement) await document.exitFullscreen();
+        await el.requestFullscreen();
+        fsMode = mode;
+        return;
+      }catch(_e){
+        // cae a pseudo
+      }
+    }
+
+    // Fallback móvil (Safari iOS / GitHub Pages)
+    enterPseudoFullscreen(el, mode);
+  }
+
+  function exitFullscreenAny(){
+    if(pseudoMode){
+      exitPseudoFullscreen();
+      return;
+    }
+    if(document.fullscreenElement && document.exitFullscreen){
+      document.exitFullscreen();
+    }
+  }
+
+  function detectFsMode(){
+    // Si hay fullscreen nativo, manda eso
+    const fsEl = document.fullscreenElement;
+    if(fsEl){
+      const id = fsEl.id || "";
+      if(id === "ecgViewer") fsMode = "ecg";
+      else if(id === "sessViewer") fsMode = "session";
+      else if(id === "algoViewer") fsMode = "algo";
+      else fsMode = null;
+
+      showExitButtons(true);
+      return;
+    }
+
+    // Si no hay nativo, pero sí pseudo
+    if(pseudoMode){
+      fsMode = pseudoMode;
+      showExitButtons(true);
+      return;
+    }
+
+    fsMode = null;
+    showExitButtons(false);
   }
 
   function setActiveScreen(key){
@@ -161,20 +244,42 @@
       `Control de K+: <strong>${control}</strong>`;
   }
 
+  // Utilidad: setear imagen con fallback de rutas
+  function setImageWithFallback(imgEl, urls){
+    if(!imgEl) return;
+    let i = 0;
+    imgEl.onerror = () => {
+      i += 1;
+      if(i < urls.length){
+        imgEl.src = urls[i];
+      }
+    };
+    imgEl.src = urls[0];
+  }
+
+  // ECG: si alguna no existe, se oculta sola (no rompe)
   function renderECGThumbs(){
     const host = $("ecgThumbs");
     host.innerHTML = "";
     const list = (window.HK_ECG_IMAGES || []);
+
+    if(!list.length){
+      host.innerHTML = "<div class='hint' style='padding:6px 4px'>Sin ECG cargados.</div>";
+      return;
+    }
+
     list.forEach((it, i)=>{
       const btn = document.createElement("div");
       btn.className = "thumb" + (i===ecgIndex ? " active" : "");
-      btn.innerHTML = `<img src="${it.src}" alt="">`;
+      const im = document.createElement("img");
+      im.alt = "";
+      im.src = it.src;
+      im.onerror = () => { btn.remove(); };
+      btn.appendChild(im);
+
       btn.addEventListener("click", ()=>setECG(i));
       host.appendChild(btn);
     });
-    if(!list.length){
-      host.innerHTML = "<div class='hint' style='padding:6px 4px'>Sin ECG cargados.</div>";
-    }
   }
 
   function setECG(i){
@@ -191,9 +296,20 @@
     return d.length ? d : "sesion";
   }
 
-  function sessPath(n){
+  function sessCandidates(n){
     const ext = (window.HK_SESSION_EXT || "png");
-    return `${sessDir()}/${pad3(n)}.${ext}`;
+    const file = `${pad3(n)}.${ext}`;
+    const base = sessDir();
+
+    const cand = [];
+    cand.push(`${base}/${file}`);
+
+    // fallbacks típicos (por si moviste carpeta sin tocar config)
+    if(!base.startsWith("assets/")) cand.push(`assets/${base}/${file}`);
+    cand.push(`sesion/${file}`);
+    cand.push(`assets/sesion/${file}`);
+    cand.push(`assets/images/sesion/${file}`);
+    return cand;
   }
 
   function setSession(n){
@@ -201,13 +317,21 @@
     const clamped = Math.max(1, Math.min(total, n));
     sessIndex = clamped;
 
-    $("sessImage").src = sessPath(sessIndex);
+    setImageWithFallback($("sessImage"), sessCandidates(sessIndex));
     $("sessCaption").textContent = `Diapositiva ${pad3(sessIndex)} / ${pad3(total)}`;
   }
 
+  function algoCandidates(){
+    const src = (window.HK_ALGO_SRC || "assets/images/algo/algoritmo.png").replace(/^\/+/,'');
+    const cand = [];
+    cand.push(src);
+    cand.push("assets/images/algo/algoritmo.png");
+    cand.push("assets/images/algo/algo.png");
+    return [...new Set(cand)];
+  }
+
   function setAlgoImage(){
-    const src = (window.HK_ALGO_SRC || "assets/images/algo/algoritmo.png");
-    $("algoImage").src = src;
+    setImageWithFallback($("algoImage"), algoCandidates());
     $("algoCaption").textContent = "Algoritmo";
   }
 
@@ -285,20 +409,36 @@
     document.head.appendChild(style);
   }
 
+  function pickWeighted(){
+    // Menos “IV por defecto”: más casos leves
+    const r = Math.random();
+    if(r < 0.52) return "leve";
+    if(r < 0.85) return "moderada";
+    return "grave";
+  }
+
+  function shuffle(arr){
+    for(let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
   function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
   function genCase(){
-    const band = pick(["leve","moderada","grave"]);
+    const band = pickWeighted();
     let k = 3.2;
     if(band==="leve") k = pick([3.0,3.1,3.2,3.3,3.4]);
     if(band==="moderada") k = pick([2.5,2.6,2.7,2.8,2.9]);
     if(band==="grave") k = pick([2.0,2.1,2.2,2.3,2.4]);
 
-    const riskHigh = Math.random() < 0.28;
-    const ecg = (band!=="leve" && Math.random() < 0.35) ? 1 : 0;
-    const symp = (band==="grave" && Math.random() < 0.45) ? 1 : 0;
-    const vo = (band==="grave" && Math.random() < 0.35) ? 0 : 1;
-    const mg = Math.random() < 0.22;
+    const riskHigh = Math.random() < 0.18; // antes 0.28
+    const ecg = (band!=="leve" && Math.random() < 0.25) ? 1 : 0; // antes 0.35
+    const symp = (band==="grave" && Math.random() < 0.35) ? 1 : 0; // antes 0.45
+    const vo = (band==="grave" && Math.random() < 0.28) ? 0 : 1;
+    const mg = Math.random() < 0.18;
 
     const riskEff = riskHigh || ecg || symp;
     const needsIV = (k < 2.5) || riskEff || (k < 3.0) || !vo;
@@ -328,11 +468,11 @@
       `Sospecha Mg bajo: ${mg ? "sí" : "no"}`
     ].join(" · ");
 
-    const options = [
+    const options = shuffle([
       { key:"VO", label:"Elegir vía oral fraccionada (si tolera) + tratar causa + seguimiento" },
       { key:"IV", label:"Elegir perfusión IV (sin bolo) + monitorización/controles según riesgo" },
       { key:"MIX", label:"Dar algo de IV “por si acaso” pero sin definir velocidad/concentración ni controles" }
-    ];
+    ]);
 
     return {
       title: "Caso",
@@ -390,27 +530,6 @@
     $("resetCase").style.display = "inline-block";
   }
 
-  function showExitButtons(on){
-    ["ecgExit","sessExit","algoExit"].forEach(id=>{
-      const el = $(id);
-      if(!el) return;
-      el.classList.toggle("show", !!on);
-    });
-  }
-
-  function detectFsMode(){
-    const fsEl = document.fullscreenElement;
-    fsMode = null;
-    if(!fsEl) { showExitButtons(false); return; }
-
-    const id = fsEl.id || "";
-    if(id === "ecgViewer") fsMode = "ecg";
-    else if(id === "sessViewer") fsMode = "session";
-    else if(id === "algoViewer") fsMode = "algo";
-
-    showExitButtons(true);
-  }
-
   function enableNavigation(){
     let x0=null, y0=null, t0=0;
     const root = $("appRoot");
@@ -432,8 +551,23 @@
 
       x0=null; y0=null;
 
-      if(document.fullscreenElement) return;
+      if(isAnyModalOpen()) return;
 
+      // En pseudo fullscreen: swipe cambia slides/ECG
+      if(pseudoMode){
+        if(Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)*1.4 && dt < 600){
+          if(fsMode === "session"){
+            if(dx < 0) setSession(sessIndex+1);
+            else setSession(sessIndex-1);
+          }else if(fsMode === "ecg"){
+            if(dx < 0) setECG(ecgIndex+1);
+            else setECG(ecgIndex-1);
+          }
+        }
+        return;
+      }
+
+      // Normal: swipe cambia pantallas
       if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)*1.4 && dt < 500){
         if(dx < 0) nextScreen();
         else prevScreen();
@@ -441,10 +575,10 @@
     }, {passive:true});
 
     document.addEventListener("keydown",(e)=>{
-      const modalOpen = ["modalBib","modalStudy","modalTips","modalRiskInfo"].some(id=>$(id).classList.contains("open"));
-      if(modalOpen) return;
+      if(isAnyModalOpen()) return;
 
-      if(document.fullscreenElement){
+      // fullscreen (nativo o pseudo)
+      if(document.fullscreenElement || pseudoMode){
         if(fsMode === "session"){
           if(e.key === "ArrowRight") { setSession(sessIndex+1); return; }
           if(e.key === "ArrowLeft")  { setSession(sessIndex-1); return; }
@@ -454,7 +588,7 @@
           if(e.key === "ArrowLeft")  { setECG(ecgIndex-1); return; }
         }
         if(e.key === "Escape"){
-          document.exitFullscreen && document.exitFullscreen();
+          exitFullscreenAny();
           return;
         }
         return;
@@ -517,13 +651,13 @@
 
     $("ecgPrev").addEventListener("click", ()=>setECG(ecgIndex-1));
     $("ecgNext").addEventListener("click", ()=>setECG(ecgIndex+1));
-    $("ecgFS").addEventListener("click", ()=>requestFullscreen($("ecgViewer")));
-    $("ecgExit").addEventListener("click", ()=>document.exitFullscreen && document.exitFullscreen());
+    $("ecgFS").addEventListener("click", ()=>requestFullscreen($("ecgViewer"), "ecg"));
+    $("ecgExit").addEventListener("click", exitFullscreenAny);
 
     $("sessPrev").addEventListener("click", ()=>setSession(sessIndex-1));
     $("sessNext").addEventListener("click", ()=>setSession(sessIndex+1));
-    $("sessFS").addEventListener("click", ()=>requestFullscreen($("sessViewer")));
-    $("sessExit").addEventListener("click", ()=>document.exitFullscreen && document.exitFullscreen());
+    $("sessFS").addEventListener("click", ()=>requestFullscreen($("sessViewer"), "session"));
+    $("sessExit").addEventListener("click", exitFullscreenAny);
     $("sessJump").addEventListener("click", ()=>{
       const total = Number(window.HK_SESSION_TOTAL || 21);
       const n = prompt(`Ir a diapositiva (1–${total})`, String(sessIndex));
@@ -531,8 +665,8 @@
       if(!Number.isNaN(v)) setSession(v);
     });
 
-    $("algoFS").addEventListener("click", ()=>requestFullscreen($("algoViewer")));
-    $("algoExit").addEventListener("click", ()=>document.exitFullscreen && document.exitFullscreen());
+    $("algoFS").addEventListener("click", ()=>requestFullscreen($("algoViewer"), "algo"));
+    $("algoExit").addEventListener("click", exitFullscreenAny);
 
     $("newCase").addEventListener("click", ()=>renderCase(genCase()));
     $("resetCase").addEventListener("click", ()=>{ if(CASE_STATE.current) renderCase(CASE_STATE.current); });
