@@ -1,4 +1,4 @@
-/* (PEGAR ENTERO) */
+/* css/styles.css (pega ENTERO reemplazando tu styles.css) */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
   --bg:#f7f3ea;
@@ -302,7 +302,7 @@ html, body{
 }
 .viewer-main img{max-width:100%;max-height:100%;object-fit:contain;display:block}
 
-/* X fullscreen */
+/* X */
 .fs-exit{
   position:absolute;top:10px; right:10px;
   width:38px; height:38px;
@@ -313,6 +313,7 @@ html, body{
   font-weight:1000;
   cursor:pointer;
   display:none;
+  z-index:3;
 }
 .fs-exit.show{display:block}
 
@@ -321,8 +322,9 @@ html, body{
 
 /* Session */
 .slides{height:100%;min-height:0;display:flex;flex-direction:column;gap:10px}
-.sess-foot{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.sess-path{font-weight:950;color: rgba(15,23,42,.82)}
+.sess-foot{display:flex;justify-content:flex-end;align-items:center;gap:10px}
+
+/* Buttons */
 .mini{
   border-radius:12px;padding:10px 12px;border:1px solid rgba(18,64,125,.22);
   background: rgba(18,64,125,.08);color: rgba(11,42,85,.95);
@@ -351,6 +353,40 @@ html, body{
 }
 .fb.show{display:block}
 .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+
+/* -----------------------
+   PSEUDO FULLSCREEN (móvil)
+   ----------------------- */
+body.pseudo-fs-on .header{display:none}
+body.pseudo-fs-on .app{height:100vh}
+body.pseudo-fs-on .side-tabs{display:none}
+body.pseudo-fs-on .drawer-overlay{display:none !important}
+
+.viewer.pseudo-fs{
+  position:fixed !important;
+  inset:0 !important;
+  z-index:9999 !important;
+  border-radius:0 !important;
+  border:none !important;
+  background:#0b1220 !important;
+}
+.viewer.pseudo-fs .viewer-top{
+  position:sticky;
+  top:0;
+  z-index:2;
+  background: rgba(11,18,32,.92);
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+.viewer.pseudo-fs .viewer-top .cap{color: rgba(255,255,255,.86)}
+.viewer.pseudo-fs .iconbtn{
+  border-color: rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color:#fff;
+}
+.viewer.pseudo-fs .viewer-main{
+  background:#0b1220;
+}
+.viewer.pseudo-fs .fs-exit{display:block}
 
 @media (max-width: 380px){
   .sev button{min-width: 86px}
